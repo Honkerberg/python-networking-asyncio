@@ -1,0 +1,32 @@
+Connection config
+---------------------------------------
+IP: 127.0.0.1
+Port: 20001
+
+
+Example I/O
+---------------------------------------
+Input:  Status(Help)
+Output: Help: Status( MessId 'nr', AckMessId 'nr', Info All/Teach/Device, Tray 'nr'/All, OrderQueue 'nr'/All, ExtAck 'transId')
+
+Example: Status( MessId '1', AkcMessId '1', Info All/Device)
+
+
+Commands you can send to virtual PLC
+----------------------------------------------
+S: Help
+Help Commands:
+Status()		Check machine status and get answers.
+FetchTray()		Order a tray to an opening.
+FetchPrioTray()		Order a prioritized tray to an opening.
+NextTray()		Next tray to an opening.
+OpenInvent()		Handle inventory request.
+EraseOrderQueue()		Reset order queue and return tray to storage.
+WriteRow()			Write text to free text rows.
+LightBar()			Command to light bar.
+LaserPointer()			Command to laser pointer.
+SideTable()			Command to side table.
+SetTime()			Set the PLC time.
+Toff			Turn off connection timeout.
+Ton			Turn on connection timeout.
+Help inside a command brackets gives syntax help. E.g. Status(Help)
