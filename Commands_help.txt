@@ -1,0 +1,27 @@
+Help syntax where you can see what should command contains, Example: Status(Help)
+---------------------------------------------------------------------------------
+
+Status( MessId 'nr', AckMessId 'nr', Info All/Teach/Device, Tray 'nr'/All, OrderQueue 'nr'/All, ExtAck 'transId')
+
+FetchTray( MessId 'nr', TransID 'nr', Opening 'nr', Start 0/1, Type Out/In/OutNoReturn/InNoReturn, Tray 'nr', Box 'Position', ArtNr 'Number', ArtText 'Text')
+
+FetchPrioTray( MessId 'nr', TransID 'nr', Opening 'nr', Start 0/1, Type Out/In/OutNoReturn/InNoReturn, Tray 'nr', Box 'Position', ArtNr 'Number', ArtText 'Text')
+
+NextTray( MessId 'nr', Opening 'nr', Tray1 'nr', Tray2 'nr', Tray3 'nr')
+
+OpenInvent( MessId 'nr', Opening 'nr', TransId 'nr', Enable '1' or '0')
+
+EraseOrderQueue( MessId 'nr', Opening 'nr' or Opening All)
+
+WriteRow( MessId 'nr', Opening 'nr', Text 'text')
+
+LightBar( MessId 'nr', Opening 'nr', Type 'nr', XPos 'nr', XSize 'nr', YDigit 'nr')
+
+LaserPointer( MessId 'nr', LpId 'nr', Type 'nr', XPos 'nr', YPos 'nr')
+
+SideTable( MessId 'nr', Opening 'nr', Type 'Out/In', XPos 'nr')
+
+SetTime( MessId 'nr', Year 'year', Month 'month', Day 'day', Hour 'hour', Minute 'minute', Second 'second')
+
+
+
