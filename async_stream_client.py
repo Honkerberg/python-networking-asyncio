@@ -1,6 +1,6 @@
 import socket
-import asyncio
 import time
+import asyncio
 
 
 # Connection config
