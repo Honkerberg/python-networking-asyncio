@@ -9,7 +9,7 @@ Example I/O
 Input:  Status(Help)
 Output: Help: Status( MessId 'nr', AckMessId 'nr', Info All/Teach/Device, Tray 'nr'/All, OrderQueue 'nr'/All, ExtAck 'transId')
 
-Example: Status( MessId '1', AkcMessId '1', Info All/Device)
+Example: Status( MessId '1', AckMessId '1', Info Device)
 
 
 Commands you can send to virtual PLC
