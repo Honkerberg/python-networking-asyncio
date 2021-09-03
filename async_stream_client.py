@@ -22,7 +22,15 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
             print(data.decode())
 
         def set_time():
-            timeinfo = "SetTime( MessId '2', Year 2021, Month 9, Day 3, Hour 10, Minute 15, Second 0)" + NEW_LINE
+            year = time.strftime('%Y')
+            month = time.strftime('%m')
+            day = time.strftime('%d')
+            hour = time.strftime('%H')
+            minute = time.strftime('%M')
+            second = time.strftime('%S')
+
+            timeinfo = "SetTime(MessId '2', Year {0}, Month {1}, Day {2}, Hour {3}, Minute {4}, Second {5})" + NEW_LINE
+            timeinfo = timeinfo.format(year, month, day, hour, minute, second)
             s.send(timeinfo.encode())
             data_time = s.recv(1024)
             print(data_time.decode())
@@ -31,4 +39,3 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
         connection()
         send_message()
         set_time()
-
