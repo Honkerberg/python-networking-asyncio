@@ -16,7 +16,8 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
             print('Connected successfully!')
 
         def send_message():
-            message = "Status( MessId '1', AckMessId '1', Info Device)" + NEW_LINE
+            # message = "Status( MessId '1', AckMessId '1', Info Device)" + NEW_LINE
+            message = "Status(OrderQueue All)" + NEW_LINE # Sending messages without mess id?
             s.send(message.encode())
             data = s.recv(1024)
             print(data.decode())
@@ -37,5 +38,5 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
             print('Date time set.')
 
         connection()
-        send_message()
         set_time()
+        send_message()
