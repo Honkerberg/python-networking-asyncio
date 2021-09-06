@@ -2,8 +2,7 @@ import socket
 import time
 import asyncio
 
-
-# Connection config
+# Connection config constants
 HOST = '127.0.0.1'
 PORT = 20001
 NEW_LINE = '\r\n' # Must be used at every message when you need send data to PLC (\r a \n - CR LF (Carriage return + Line feed))
@@ -11,17 +10,31 @@ NEW_LINE = '\r\n' # Must be used at every message when you need send data to PLC
 with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
 
 
-        def connection():
-            s.connect((HOST, PORT))
-            print('Connected successfully!')
+        async def connection():
+            try:
+                print('Connecting...')
+                await asyncio.sleep(2)
+                s.connect((HOST, PORT))
+                print('Connected successfully, communication begins..')
+                await asyncio.sleep(3)
+
+                while True:
+                    data = s.recv(1024)
+                    if not data:
+                        print('Connection automatically ended.')
+                        break
+
+            except socket.error as exc:
+                print("Exception caught: %s" % exc)
+
 
         def send_message():
-            # message = "Status( MessId '1', AckMessId '1', Info Device)" + NEW_LINE
-            message = "Status(OrderQueue All)" + NEW_LINE # Sending messages without mess id?
+            message = "Status( MessId '1', AckMessId '1', Info Device)" + NEW_LINE
             s.send(message.encode())
             data = s.recv(1024)
             print(data.decode())
 
+        
         def set_time():
             year = time.strftime('%Y')
             month = time.strftime('%m')
@@ -37,6 +50,14 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
             print(data_time.decode())
             print('Date time set.')
 
-        connection()
-        set_time()
-        send_message()
+
+        # Preparation for async communication
+        # Main function for calling async functions
+        async def main(): 
+            task1 = asyncio.create_task(connection())
+
+        asyncio.run(connection())
+
+        # asyncio.run(main())
+        # set_time()
+        # send_message()
