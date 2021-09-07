@@ -126,8 +126,9 @@ orders = {
 
 with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
 
-        async def send_message():
-            message = orders["statusall"] + NEW_LINE
+        # FetchTray, NextTray, WriteRow.. - these send in this order
+        async def send_message(text):
+            message = text + NEW_LINE
             s.send(message.encode())
             data = s.recv(1024)
             print(data.decode())
@@ -158,7 +159,7 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
             print(f"Main function started at {time.strftime('%X')}")
             task1 = asyncio.create_task(connection())
             await task1
-            task2 = asyncio.create_task(send_message())
+            task2 = asyncio.create_task(send_message(orders["statusall"]))
             await task2
             task3 = asyncio.create_task(set_time())
             await task3
