@@ -151,6 +151,7 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
             data_time = s.recv(1024)
             # print(data_time.decode())
             print("Actual date time set.")
+            await asyncio.sleep(1)
 
         # Preparation for async communication
         # Main function for calling async functions declared above
@@ -159,9 +160,9 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
             print(f"Main function started at {time.strftime('%X')}")
             task1 = asyncio.create_task(connection())
             await task1
-            task2 = asyncio.create_task(send_message(orders["statusall"]))
+            task2 = asyncio.create_task(set_time())
             await task2
-            task3 = asyncio.create_task(set_time())
+            task3 = asyncio.create_task(send_message(orders["statusall"]))
             await task3
             print(f"Main function completed at {time.strftime('%X')}")
 
