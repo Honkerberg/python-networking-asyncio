@@ -6,14 +6,14 @@ import asyncio
 HOST = '127.0.0.1'
 PORT = 20001
 NEW_LINE = '\r\n' # Used when you send data(\r\n = Carriage return + Line feed)
-nr = 1
 
-year = time.strftime('%Y')
-month = time.strftime('%m')
-day = time.strftime('%d')
-hour = time.strftime('%H')
-minute = time.strftime('%M')
-second = time.strftime('%S')
+
+year = int(time.strftime("%Y"))
+month = time.strftime("%m")
+day = time.strftime("%d")
+hour = time.strftime("%H")
+minute = time.strftime("%M")
+second = time.strftime("%S")
 
 # Dictionary with messages you can send
 orders = {
@@ -28,8 +28,8 @@ orders = {
     ,
     "statusall": # Derived message from status above
         f"Status("
-            "MessId '{nr}', "
-            "AckMessId '{nr}', "
+            "MessId {}, "
+            "AckMessId {}, "
             "Info Device)"
     ,
     "fetchtray":
@@ -108,13 +108,13 @@ orders = {
     ,
     "settime":
         f"SetTime("
-            "MessId '{nr}', "
-            "Year {year}, "
-            "Month {month}, "
-            "Day {day}, "
-            "Hour {hour}, "
-            "Minute {minute}, "
-            "Second {second})"
+            "MessId {}, "
+            "Year {}, "
+            "Month {}, "
+            "Day {}, "
+            "Hour {}, "
+            "Minute {}, "
+            "Second {})"
     ,
     "ton":
         f"Ton"
@@ -125,14 +125,7 @@ orders = {
 }
 
 with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
-
-        # FetchTray, NextTray, WriteRow.. - these send in this order
-        async def send_message(text):
-            message = text + NEW_LINE
-            s.send(message.encode())
-            data = s.recv(1024)
-            print(data.decode())
-            await asyncio.sleep(1)
+        nr = 1
 
         async def connection():
             try:
@@ -145,27 +138,35 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
             except socket.error as exc:
                 print("Exception caught: %s" % exc)
         
-        async def set_time():
-            timeinfo = orders["settime"] + NEW_LINE
+        async def set_time(nr):
+            timeinfo = (orders["settime"].format(nr, year, month, day, hour, minute, second)) + NEW_LINE
             s.send(timeinfo.encode())
             data_time = s.recv(1024)
-            # print(data_time.decode())
+            print(data_time.decode())
             print("Actual date time set.")
+            await asyncio.sleep(1)
+
+        # FetchTray, NextTray, WriteRow.. - these send in this order
+        async def send_message_status(nr):
+            message = orders["statusall"].format(nr, nr) + NEW_LINE
+            s.send(message.encode())
+            data = s.recv(1024)
+            print(data.decode())
             await asyncio.sleep(1)
 
         # Preparation for async communication
         # Main function for calling async functions declared above
 
-        async def main():
+        async def main(nr):
             print(f"Main function started at {time.strftime('%X')}")
             task1 = asyncio.create_task(connection())
             await task1
-            task2 = asyncio.create_task(set_time())
+            task2 = asyncio.create_task(set_time(nr))
             await task2
-            task3 = asyncio.create_task(send_message(orders["statusall"]))
+            task3 = asyncio.create_task(send_message_status(nr))
             await task3
             print(f"Main function completed at {time.strftime('%X')}")
 
-        asyncio.run(main())
+        asyncio.run(main(nr))
         # set_time()
         # send_message()
