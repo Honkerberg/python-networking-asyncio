@@ -1,14 +1,15 @@
+from asyncio import tasks
 import socket
 import time
 import asyncio
 
 # Connection config constants
-HOST = '127.0.0.1'
+HOST = "127.0.0.1"
 PORT = 20001
-NEW_LINE = '\r\n' # Used when you send data(\r\n = Carriage return + Line feed)
+NEW_LINE = "\r\n" # Used when you send data(\r\n = Carriage return + Line feed)
 
 
-year = int(time.strftime("%Y"))
+year = time.strftime("%Y")
 month = time.strftime("%m")
 day = time.strftime("%d")
 hour = time.strftime("%H")
@@ -26,7 +27,7 @@ orders = {
             "OrderQueue 'nr'/All, "
             "ExtAck 'transId')"
     ,
-    "statusall": # Derived message from status above
+    "statusdevice": # Derived message from status above
         f"Status("
             "MessId {}, "
             "AckMessId {}, "
@@ -148,25 +149,38 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
 
         # FetchTray, NextTray, WriteRow.. - these send in this order
         async def send_message_status(nr):
-            message = orders["statusall"].format(nr, nr) + NEW_LINE
-            s.send(message.encode())
-            data = s.recv(1024)
-            print(data.decode())
-            await asyncio.sleep(1)
+            while True:
+                nr += 1
+                message = orders["statusdevice"].format(nr, nr) + NEW_LINE
+                s.send(message.encode())
+                data = s.recv(1024)
+                print(data.decode())
+                await asyncio.sleep(0.5)
 
         # Preparation for async communication
         # Main function for calling async functions declared above
+        loop = asyncio.get_event_loop()
 
-        async def main(nr):
+        def main(nr):
             print(f"Main function started at {time.strftime('%X')}")
-            task1 = asyncio.create_task(connection())
-            await task1
-            task2 = asyncio.create_task(set_time(nr))
-            await task2
-            task3 = asyncio.create_task(send_message_status(nr))
-            await task3
+            # task1 = asyncio.create_task(connection())
+            # await task1
+            # task2 = asyncio.create_task(set_time(nr))
+            # await task2
+            # task3 = asyncio.create_task(send_message_status(nr))
+            # await task3
+            try:
+                loop.run_until_complete(connection())
+                loop.run_until_complete(set_time(nr))
+                asyncio.ensure_future(send_message_status(nr))
+                loop.run_forever()
+            except KeyboardInterrupt:
+                pass
+            finally:
+                print("Stopping loop...")
+                loop.stop()
             print(f"Main function completed at {time.strftime('%X')}")
 
-        asyncio.run(main(nr))
+        main(nr)
         # set_time()
         # send_message()
