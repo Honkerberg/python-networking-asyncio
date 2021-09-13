@@ -1,6 +1,7 @@
 import socket
 import time
 import asyncio
+import sys
 
 # Connection config constants
 HOST = "127.0.0.1"
@@ -52,6 +53,19 @@ orders = {
             "Box 'Position', "
             "ArtNr 'Number', "
             "ArtText 'Text')"
+    ,
+    "fetchspecifictray": # Derived from fetchtray, add Count later
+        f"FetchTray("
+            "MessId {}, "
+            "TransId {}, "
+            "Opening 1, "
+            "Start 1, " # 0 or 1
+            "Type OutNoReturn, " # In/Out/OutNoReturn/InNoReturn
+            "Tray {}, "
+            "Box {}, " # Box position
+            "Count {}, "
+            "ArtNr {}, " # Article number (text or number?)
+            "ArtText {} )" # Description of items on tray - Article text
     ,
     "fetchpriotray":
         f"FetchPrioTray("
@@ -134,6 +148,15 @@ orders = {
 }
 
 with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
+    sys.stdout.flush()
+    artnr = 'Test artiklu'
+    textarg = 'Toto je popis k artiklu.'
+    format_artnr = "< {}>".format(len(artnr)) + artnr
+    format_textarg = "< {}>".format(len(textarg)) + textarg
+    box_position = 2
+    tray = 10
+    count = 23
+    transID = 101
     nr = 1
 
     async def connection():
@@ -143,19 +166,20 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
             s.connect((HOST, PORT))
             print("Connected successfully, communication begins..")
             await asyncio.sleep(1)
+            
         except:
             print("Connection error.")
 
     async def message_generator(nr, message):
         s.send(message.encode())
-        data = s.recv(8192)
-        print(data.decode())
         if "SetTime" in message:
             print("Date time set.")
         elif "OrderQueue All" in message:
             print("Order queue shown.")
-        
-        await asyncio.sleep(0.5)
+        data = s.recv(1024)
+        decoded = data.decode()
+        print(decoded)
+        await asyncio.sleep(1)
 
     async def initialization(nr):  # Execute more tasks
         task1 = asyncio.create_task(connection())
@@ -165,24 +189,37 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
         task3 = asyncio.create_task(message_generator(nr, orders["statusdevice"].format(nr) + NEW_LINE))
         await task3
 
+    async def fetch_tray(nr): # Load specific tray you send to PLC
+        task1 = asyncio.create_task(message_generator(nr, orders["fetchspecifictray"].format(nr, transID, tray, box_position, count, format_artnr, format_textarg) + NEW_LINE))
+        await task1
+        task2 = asyncio.create_task(queue_and_info_message(nr))
+        await task2
+
+    async def next_tray(): # Put your tray into queue
+        pass
+
+    async def open_invent():
+        pass
+
+    async def write_row():
+        pass
+
     async def queue_and_info_message(nr):
-        loop = asyncio.get_running_loop()
-        end_time = loop.time() + 15.0
-        while True:
-            task1 = asyncio.create_task(message_generator(nr, orders["statusqueueall"].format(nr) + NEW_LINE))
-            await task1
-            task2 = asyncio.create_task(message_generator(nr, orders["statusinfoall"].format(nr) + NEW_LINE)) # Need to cut bytes
-            await task2
-            if (loop.time() + 1.0) >= end_time:
-                break
-    # Main function for calling async functions declared above
-    async def main(nr):
-        print(f"Main function started at {time.strftime('%X')}")
+        # loop = asyncio.get_running_loop()
+        # while True:
+            try:
+                task1 = asyncio.create_task(message_generator(nr, orders["statusqueueall"].format(nr) + NEW_LINE))
+                await task1
+                task2 = asyncio.create_task(message_generator(nr, orders["statusinfoall"].format(nr) + NEW_LINE))
+                await task2
+            except KeyboardInterrupt:
+                pass
+    # Init function for calling async functions declared above
+    async def init(nr):
+        print(f"Init function started at {time.strftime('%X')}")
         await initialization(nr)
-        print(f"Main function completed at {time.strftime('%X')}")
+        print(f"Init function completed at {time.strftime('%X')}")
 
-    asyncio.run(main(nr))
+    asyncio.run(init(nr))
     asyncio.run(queue_and_info_message(nr))
-    # asyncio.run(connection())
-    # asyncio.run(send_message_status(nr))
-
+    asyncio.run(fetch_tray(nr))
