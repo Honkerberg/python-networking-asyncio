@@ -7,6 +7,8 @@ import sys
 HOST = "127.0.0.1"
 PORT = 20001
 NEW_LINE = "\r\n" # Used when you send data(\r\n = Carriage return + Line feed)
+NR = 1
+ACK = 1
 
 # Defined actual date time
 year = time.strftime("%Y")
@@ -40,6 +42,7 @@ orders = {
     "statusinfoall":  # Status info all
     f"Status("
         "MessId {}, "
+        "AckMessId {}, "
         "Info All)"
     ,
     "fetchtray":
@@ -148,16 +151,15 @@ orders = {
 }
 
 with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
-    sys.stdout.flush()
     artnr = 'Test artiklu'
     textarg = 'Toto je popis k artiklu.'
     format_artnr = "< {}>".format(len(artnr)) + artnr
     format_textarg = "< {}>".format(len(textarg)) + textarg
-    box_position = 2
-    tray = 10
-    count = 23
-    transID = 101
-    nr = 1
+    box_position = 1
+    tray = 3
+    count = 30
+    transID = 110
+    
 
     async def connection():
         try:
@@ -170,29 +172,42 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
         except:
             print("Connection error.")
 
-    async def message_generator(nr, message):
-        s.send(message.encode())
+    async def message_generator(message):
+        global NR
+        NR += 1
         if "SetTime" in message:
             print("Date time set.")
         elif "OrderQueue All" in message:
             print("Order queue shown.")
+        elif "Info All" in message:
+            global ACK
+            ACK += 1
+        s.send(message.encode())
         data = s.recv(1024)
+        # elif "TransDone" in data:
+        #     start = (data.index("TransDone") - 2)
+        #     end = (data.index(")", 0) + 1)
+        #     splitted = data[start:end]
+        #     if splitted in data:
+        #         data = data.replace(splitted, "")
+        #         print (data)
+        
         decoded = data.decode()
         print(decoded)
         await asyncio.sleep(1)
 
-    async def initialization(nr):  # Execute more tasks
+    async def initialization():  # Execute more tasks
         task1 = asyncio.create_task(connection())
         await task1
-        task2 = asyncio.create_task(message_generator(nr,orders["settime"].format(nr, year, month, day, hour, minute, second) + NEW_LINE))
+        task2 = asyncio.create_task(message_generator(orders["settime"].format(NR, year, month, day, hour, minute, second) + NEW_LINE))
         await task2
-        task3 = asyncio.create_task(message_generator(nr, orders["statusdevice"].format(nr) + NEW_LINE))
+        task3 = asyncio.create_task(message_generator(orders["statusdevice"].format(NR) + NEW_LINE))
         await task3
 
-    async def fetch_tray(nr): # Load specific tray you send to PLC
-        task1 = asyncio.create_task(message_generator(nr, orders["fetchspecifictray"].format(nr, transID, tray, box_position, count, format_artnr, format_textarg) + NEW_LINE))
+    async def fetch_tray(): # Load specific tray you send to PLC
+        task1 = asyncio.create_task(message_generator(orders["fetchspecifictray"].format(NR, transID, tray, box_position, count, format_artnr, format_textarg) + NEW_LINE))
         await task1
-        task2 = asyncio.create_task(queue_and_info_message(nr))
+        task2 = asyncio.create_task(queue_and_info_message())
         await task2
 
     async def next_tray(): # Put your tray into queue
@@ -204,22 +219,25 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
     async def write_row():
         pass
 
-    async def queue_and_info_message(nr):
+    async def queue_and_info_message():
         # loop = asyncio.get_running_loop()
         # while True:
             try:
-                task1 = asyncio.create_task(message_generator(nr, orders["statusqueueall"].format(nr) + NEW_LINE))
+                task1 = asyncio.create_task(message_generator(orders["statusqueueall"].format(NR) + NEW_LINE))
                 await task1
-                task2 = asyncio.create_task(message_generator(nr, orders["statusinfoall"].format(nr) + NEW_LINE))
+                task2 = asyncio.create_task(message_generator(orders["statusinfoall"].format(NR, ACK) + NEW_LINE))
                 await task2
             except KeyboardInterrupt:
                 pass
     # Init function for calling async functions declared above
-    async def init(nr):
+    async def init():
         print(f"Init function started at {time.strftime('%X')}")
-        await initialization(nr)
+        await initialization()
         print(f"Init function completed at {time.strftime('%X')}")
 
-    asyncio.run(init(nr))
-    asyncio.run(queue_and_info_message(nr))
-    asyncio.run(fetch_tray(nr))
+    asyncio.run(init())
+    asyncio.run(queue_and_info_message())
+    # asyncio.run(connection())
+    # asyncio.run(message_generator(orders["statusinfoall"].format(NR) + NEW_LINE))
+    # asyncio.run(fetch_tray())
+    
