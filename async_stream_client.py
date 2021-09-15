@@ -1,14 +1,14 @@
 import socket
 import time
 import asyncio
-import sys
 
 # Connection config constants
 HOST = "127.0.0.1"
 PORT = 20001
 NEW_LINE = "\r\n" # Used when you send data(\r\n = Carriage return + Line feed)
 NR = 1
-ACK = 1
+ACK = -1
+OPENING = 1
 
 # Defined actual date time
 year = time.strftime("%Y")
@@ -92,10 +92,10 @@ orders = {
     ,
     "openinvent":
         f"OpenInvent("
-            "MessId 'nr', "
-            "Opening 'nr', "
-            "TransId 'nr', "
-            "Enable '1' or '0')"
+            "MessId {}, "
+            "Opening {}, "
+            "TransId {}, "
+            "Enable 0)" # 1 or 0
     ,
     "eraseorderqueue":
         f"EraseOrderQueue("
@@ -156,9 +156,9 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
     format_artnr = "< {}>".format(len(artnr)) + artnr
     format_textarg = "< {}>".format(len(textarg)) + textarg
     box_position = 1
-    tray = 3
-    count = 30
-    transID = 110
+    tray = 4
+    count = 40
+    transID = 111
     
 
     async def connection():
@@ -173,25 +173,15 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
             print("Connection error.")
 
     async def message_generator(message):
-        global NR
+        global NR, ACK
+        ACK += 1
         NR += 1
         if "SetTime" in message:
             print("Date time set.")
         elif "OrderQueue All" in message:
-            print("Order queue shown.")
-        elif "Info All" in message:
-            global ACK
-            ACK += 1
+            print("Order queue shown.")            
         s.send(message.encode())
-        data = s.recv(1024)
-        # elif "TransDone" in data:
-        #     start = (data.index("TransDone") - 2)
-        #     end = (data.index(")", 0) + 1)
-        #     splitted = data[start:end]
-        #     if splitted in data:
-        #         data = data.replace(splitted, "")
-        #         print (data)
-        
+        data = s.recv(1024)        
         decoded = data.decode()
         print(decoded)
         await asyncio.sleep(1)
@@ -214,6 +204,10 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
         pass
 
     async def open_invent():
+        task1 = asyncio.create_task(message_generator(orders["openinvent"].format(NR, OPENING, transID)))
+        await task1
+        task2 = asyncio.create_task(queue_and_info_message())
+        await task2
         pass
 
     async def write_row():
@@ -236,8 +230,6 @@ with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
         print(f"Init function completed at {time.strftime('%X')}")
 
     asyncio.run(init())
-    asyncio.run(queue_and_info_message())
-    # asyncio.run(connection())
-    # asyncio.run(message_generator(orders["statusinfoall"].format(NR) + NEW_LINE))
-    # asyncio.run(fetch_tray())
-    
+    # asyncio.run(queue_and_info_message())
+    data = None
+    # asyncio.run(queue_and_info_message())
