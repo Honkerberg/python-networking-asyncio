@@ -29,7 +29,7 @@ orders = {
     "fetchpriotray": "FetchPrioTray(MessId {}, TransID {}, Opening {}, Start 0/1, Type Out/In/OutNoReturn/InNoReturn, Tray {}, Box 'Position', ArtNr 'Number', ArtText 'Text')",
     "nexttray": "NextTray(MessId {}, Opening {}, Tray1 {}, Tray2 {}, Tray3 {})",
     "openinvent": "OpenInvent(MessId {}, Opening {}, TransId {}, Enable 0)",
-    "eraseorderqueue": "EraseOrderQueue(MessId {}, Opening {})",  # Opening default 1, or Opening All
+    "eraseorderqueue": "EraseOrderQueue(MessId {}, Opening All)",  # Opening default 1, or Opening All
     "writerow": "WriteRow(MessId {}, Opening {}, Row {}, Text {})",
     "lightbar": "LightBar(MessId {}, Opening {}, Type {}, XPos {}, XSize {}, YDigit {})",
     "laserpointer": "LaserPointer(MessId {}, LpId {}, Type {}, XPos {}, YPos {})",
@@ -47,15 +47,18 @@ box_position = 1
 tray = 4
 count = 40
 transID = 111
+tray1 = 0
+tray2 = 0
+tray3 = 0
 
 
 async def connection():
     try:
         print("Connecting...")
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(1)
         s.connect((HOST, PORT))
         print("Connected successfully, communication begins..")
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.2)
     except:
         print("Connection error.")
 
@@ -68,14 +71,107 @@ async def message_generator(message):
         print("Date time set.")
     elif "OrderQueue All" in message:
         print("Order queue shown.")
+    elif "EraseOrderQueue" in message:
+        print("Oueue erased.")
     s.send(message.encode())
     data = s.recv(1024)
     decoded = data.decode()
     print(decoded)
-    await asyncio.sleep(1)
+    if b"TransDone" in data:
+        data = None
+    await asyncio.sleep(0.1)
 
 
-async def initialization():  # Execute more tasks
+# Load specific tray you send to PLC
+async def fetch_tray():
+    task_specifictray = asyncio.create_task(
+        message_generator(
+            orders["fetchspecifictray"].format(
+                NR,
+                transID,
+                OPENING,
+                tray,
+                box_position,
+                count,
+                format_artnr,
+                format_textarg,
+            ) + NEW_LINE
+        )
+    )
+    await task_specifictray
+
+
+# Shows next trays if fetched
+async def next_tray():
+    task_nexttray = asyncio.create_task(
+        message_generator(
+            orders["nexttray"].format(
+                NR,
+                OPENING,
+                tray1,
+                tray2,
+                tray3
+            ) + NEW_LINE
+        )
+    )
+    await task_nexttray
+    task_queue_and_info_message = asyncio.create_task(
+        queue_and_info_message()
+    )
+    await task_queue_and_info_message
+    pass
+
+
+async def open_invent():
+    task_openinvent = asyncio.create_task(
+        message_generator(
+            orders["openinvent"].format(
+                NR,
+                OPENING,
+                transID
+            ) + NEW_LINE
+        )
+    )
+    await task_openinvent
+    task_queue_and_info_message = asyncio.create_task(
+        queue_and_info_message()
+    )
+    await task_queue_and_info_message
+
+
+async def write_row():
+    pass
+
+
+async def queue_and_info_message():
+    loop = asyncio.get_running_loop()
+    end_time = loop.time() + 5.0
+    while True:
+        task_status_queue_all = asyncio.create_task(
+            message_generator(
+                orders["statusqueueall"].format(
+                    NR
+                ) + NEW_LINE
+            )
+        )
+        await task_status_queue_all
+        task_status_info_all = asyncio.create_task(
+            message_generator(
+                orders["statusinfoall"].format(
+                    NR,
+                    ACK
+                ) + NEW_LINE
+            )
+        )
+        await task_status_info_all
+        if loop.time() >= end_time:
+            break
+    task_fetchtray = asyncio.create_task(fetch_tray())
+    await task_fetchtray
+
+
+# Connect and status device tasks
+async def connect_and_status_device():
     task_connection = asyncio.create_task(connection())
     await task_connection
     task_settime = asyncio.create_task(
@@ -95,83 +191,18 @@ async def initialization():  # Execute more tasks
     )
     await task_statusdevice
 
-
-async def fetch_tray():  # Load specific tray you send to PLC
-    task_specifictray = asyncio.create_task(
-        message_generator(
-            orders["fetchspecifictray"].format(
-                NR,
-                transID,
-                OPENING,
-                tray,
-                box_position,
-                count,
-                format_artnr,
-                format_textarg,
-            ) + NEW_LINE
-        )
-    )
-    await task_specifictray
-    task_queue_and_info_message = asyncio.create_task(queue_and_info_message())
-    await task_queue_and_info_message
+async def erase_order_queue():
+    task_erase_queue = asyncio.create_task(message_generator(orders["eraseorderqueue"].format(NR) + NEW_LINE))
+    await task_erase_queue
 
 
-async def next_tray():  # Put your tray into queue
-    pass
-
-
-async def open_invent():
-    task_openinvent = asyncio.create_task(
-        message_generator(
-            orders["openinvent"].format(
-                NR,
-                OPENING,
-                transID
-            ) + NEW_LINE
-        )
-    )
-    await task_openinvent
-    task_queue_and_info_message = asyncio.create_task(queue_and_info_message())
-    await task_queue_and_info_message
-
-
-async def write_row():
-    pass
-
-
-async def queue_and_info_message():
-    # loop = asyncio.get_running_loop()
-    # while True:
-    try:
-        task_status_queue_all = asyncio.create_task(
-            message_generator(
-                orders["statusqueueall"].format(
-                    NR
-                ) + NEW_LINE
-            )
-        )
-        await task_status_queue_all
-        task_status_info_all = asyncio.create_task(
-            message_generator(
-                orders["statusinfoall"].format(
-                    NR,
-                    ACK
-                ) + NEW_LINE
-            )
-        )
-        await task_status_info_all
-    except KeyboardInterrupt:
-        pass
-
-
-# Init function for calling async functions declared above
-async def init():
+# Main function for calling async functions declared above
+async def main():
     print(f"Init function started at {time.strftime('%X')}")
-    await initialization()
+    await connect_and_status_device()
     print(f"Init function completed at {time.strftime('%X')}")
 
 
-asyncio.run(init())
-# asyncio.run(queue_and_info_message())
-data = None
-# asyncio.run(queue_and_info_message())
+asyncio.run(main())
+asyncio.run(erase_order_queue())
+asyncio.run(queue_and_info_message())
