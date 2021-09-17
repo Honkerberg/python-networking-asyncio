@@ -1,6 +1,8 @@
 import socket
 import time
 import asyncio
+import random
+
 
 # Connection config constants
 HOST = "127.0.0.1"
@@ -62,6 +64,27 @@ async def connection():
     except:
         print("Connection error.")
 
+# Connect and status device tasks
+async def connect_and_status_device():
+    task_connection = asyncio.create_task(connection())
+    await task_connection
+    task_settime = asyncio.create_task(
+        message_generator(
+            orders["settime"].format(
+                NR, year, month, day, hour, minute, second
+            ) + NEW_LINE
+        )
+    )
+    await task_settime
+    task_statusdevice = asyncio.create_task(
+        message_generator(
+            orders["statusdevice"].format(
+                NR
+            ) + NEW_LINE
+        )
+    )
+    await task_statusdevice
+
 
 async def message_generator(message):
     global NR, ACK
@@ -82,6 +105,40 @@ async def message_generator(message):
     await asyncio.sleep(0.1)
 
 
+async def queue_and_info_message():
+    loop = asyncio.get_running_loop()
+    end_time = loop.time() + random.uniform(1.0, 5.0)
+    while end_time <= loop.time():
+        task_status_queue_all = asyncio.create_task(
+            message_generator(
+                orders["statusqueueall"].format(
+                    NR
+                ) + NEW_LINE
+            )
+        )
+        await task_status_queue_all
+        task_status_info_all = asyncio.create_task(
+            message_generator(
+                orders["statusinfoall"].format(
+                    NR,
+                    ACK
+                ) + NEW_LINE
+            )
+        )
+        await task_status_info_all       
+
+
+async def erase_order_queue():
+    task_erase_queue = asyncio.create_task(
+        message_generator(
+            orders["eraseorderqueue"].format(
+                NR
+            ) + NEW_LINE
+        )
+    )
+    await task_erase_queue
+
+    
 # Load specific tray you send to PLC
 async def fetch_tray():
     task_specifictray = asyncio.create_task(
@@ -141,59 +198,6 @@ async def open_invent():
 
 async def write_row():
     pass
-
-
-async def queue_and_info_message():
-    loop = asyncio.get_running_loop()
-    end_time = loop.time() + 5.0
-    while True:
-        task_status_queue_all = asyncio.create_task(
-            message_generator(
-                orders["statusqueueall"].format(
-                    NR
-                ) + NEW_LINE
-            )
-        )
-        await task_status_queue_all
-        task_status_info_all = asyncio.create_task(
-            message_generator(
-                orders["statusinfoall"].format(
-                    NR,
-                    ACK
-                ) + NEW_LINE
-            )
-        )
-        await task_status_info_all
-        if loop.time() >= end_time:
-            break
-    task_fetchtray = asyncio.create_task(fetch_tray())
-    await task_fetchtray
-
-
-# Connect and status device tasks
-async def connect_and_status_device():
-    task_connection = asyncio.create_task(connection())
-    await task_connection
-    task_settime = asyncio.create_task(
-        message_generator(
-            orders["settime"].format(
-                NR, year, month, day, hour, minute, second
-            ) + NEW_LINE
-        )
-    )
-    await task_settime
-    task_statusdevice = asyncio.create_task(
-        message_generator(
-            orders["statusdevice"].format(
-                NR
-            ) + NEW_LINE
-        )
-    )
-    await task_statusdevice
-
-async def erase_order_queue():
-    task_erase_queue = asyncio.create_task(message_generator(orders["eraseorderqueue"].format(NR) + NEW_LINE))
-    await task_erase_queue
 
 
 # Main function for calling async functions declared above
