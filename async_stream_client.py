@@ -106,6 +106,7 @@ async def message_generator(message):
 
 
 async def queue_and_info_message():
+    while True:
         task_status_queue_all = asyncio.create_task(
             message_generator(
                 orders["statusqueueall"].format(
@@ -138,6 +139,7 @@ async def erase_order_queue():
     
 # Load specific tray you send to PLC
 async def fetch_tray():
+    await asyncio.sleep(random.uniform(1.0, 10.0))
     task_specifictray = asyncio.create_task(
         message_generator(
             orders["fetchspecifictray"].format(
@@ -202,11 +204,10 @@ async def main():
     print(f"Init function started at {time.strftime('%X')}")
     await connect_and_status_device()
     print(f"Init function completed at {time.strftime('%X')}")
+    await asyncio.gather(erase_order_queue(),queue_and_info_message(), fetch_tray())
 
 
 asyncio.run(main())
-asyncio.run(erase_order_queue())
-end_time = float(time.strftime("%S")) + random.uniform(1.0, 10.0)
-while end_time >= float(time.strftime("%S")):
-    asyncio.run(queue_and_info_message())
-asyncio.run(fetch_tray())
+# asyncio.run(erase_order_queue())
+# asyncio.run(fetch_tray())
+
