@@ -106,9 +106,6 @@ async def message_generator(message):
 
 
 async def queue_and_info_message():
-    loop = asyncio.get_running_loop()
-    end_time = loop.time() + random.uniform(1.0, 5.0)
-    while end_time <= loop.time():
         task_status_queue_all = asyncio.create_task(
             message_generator(
                 orders["statusqueueall"].format(
@@ -209,4 +206,7 @@ async def main():
 
 asyncio.run(main())
 asyncio.run(erase_order_queue())
-asyncio.run(queue_and_info_message())
+end_time = float(time.strftime("%S")) + random.uniform(1.0, 10.0)
+while end_time >= float(time.strftime("%S")):
+    asyncio.run(queue_and_info_message())
+asyncio.run(fetch_tray())
