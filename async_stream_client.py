@@ -45,10 +45,10 @@ artnr = "Test artiklu"
 textarg = "Toto je popis k artiklu."
 format_artnr = "< {}>".format(len(artnr)) + artnr
 format_textarg = "< {}>".format(len(textarg)) + textarg
-box_position = 1
-tray = 4
-count = 40
-transID = 111
+box_position = random.randint(1, 10)
+tray = random.randint(1, 50)
+count = random.randint(1, 60)
+transID = random.randint(100, 199)
 tray1 = 0
 tray2 = 0
 tray3 = 0
@@ -102,7 +102,10 @@ async def message_generator(message):
     print(decoded)
     if b"TransDone" in data:
         data = None
-    await asyncio.sleep(0.1)
+    elif b"IdInOpn_1" in data:
+        await open_invent()
+        data = None
+    await asyncio.sleep(0.5)  # Lower sleep later
 
 
 async def queue_and_info_message():
@@ -139,7 +142,7 @@ async def erase_order_queue():
     
 # Load specific tray you send to PLC
 async def fetch_tray():
-    await asyncio.sleep(random.uniform(1.0, 10.0))
+    await asyncio.sleep(random.uniform(1.0, 15.0))
     task_specifictray = asyncio.create_task(
         message_generator(
             orders["fetchspecifictray"].format(
@@ -179,6 +182,7 @@ async def next_tray():
 
 
 async def open_invent():
+    await asyncio.sleep(3)
     task_openinvent = asyncio.create_task(
         message_generator(
             orders["openinvent"].format(
@@ -189,10 +193,6 @@ async def open_invent():
         )
     )
     await task_openinvent
-    task_queue_and_info_message = asyncio.create_task(
-        queue_and_info_message()
-    )
-    await task_queue_and_info_message
 
 
 async def write_row():
@@ -202,12 +202,16 @@ async def write_row():
 # Main function for calling async functions declared above
 async def main():
     print(f"Init function started at {time.strftime('%X')}")
-    await connect_and_status_device()
-    print(f"Init function completed at {time.strftime('%X')}")
-    await asyncio.gather(erase_order_queue(),queue_and_info_message(), fetch_tray())
+    try:
+        await connect_and_status_device()
+        statements = [erase_order_queue(),queue_and_info_message(), fetch_tray()]
+        main_sequence = asyncio.gather(*statements)  
+        # statements.append
+        await main_sequence
+    except KeyboardInterrupt:
+        print("Interrupted by keyboard.")
+    finally:
+        print(f"Init function completed at {time.strftime('%X')}")
 
 
 asyncio.run(main())
-# asyncio.run(erase_order_queue())
-# asyncio.run(fetch_tray())
-
