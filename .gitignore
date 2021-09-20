@@ -2,3 +2,4 @@ testing.py
 async_events.py
 async_modules.py
 __pycache__
+CT_log*.txt
