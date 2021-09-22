@@ -1,3 +1,4 @@
+from os import write
 import socket
 import time
 import asyncio
@@ -11,6 +12,8 @@ NEW_LINE = "\r\n"  # \r\n = Carriage return + Line feed
 NR = 1
 ACK = -1
 OPENING = 1
+ROW_1 = 1
+ROW_2 = 2
 
 # Defined actual date time
 year = time.strftime("%Y")
@@ -103,13 +106,13 @@ async def message_generator(message):
     if b"TransDone" in data:
         data = None
     elif b"IdInOpn_1" in data:
+        print("Waiting for webpage trigger...")
         await open_invent()
-        data = None
-    await asyncio.sleep(0.5)  # Lower sleep later
+        # data = None
+    await asyncio.sleep(0.1)  # Lower sleep later
 
 
 async def queue_and_info_message():
-    while True:
         task_status_queue_all = asyncio.create_task(
             message_generator(
                 orders["statusqueueall"].format(
@@ -127,6 +130,12 @@ async def queue_and_info_message():
             )
         )
         await task_status_info_all       
+
+
+async def idle():
+    while True:
+        await asyncio.sleep(1)
+        await queue_and_info_message()
 
 
 async def erase_order_queue():
@@ -158,6 +167,7 @@ async def fetch_tray():
         )
     )
     await task_specifictray
+    print("New tray fetched.")
 
 
 # Shows next trays if fetched
@@ -174,15 +184,10 @@ async def next_tray():
         )
     )
     await task_nexttray
-    task_queue_and_info_message = asyncio.create_task(
-        queue_and_info_message()
-    )
-    await task_queue_and_info_message
-    pass
 
 
 async def open_invent():
-    await asyncio.sleep(3)
+    await asyncio.sleep(2)
     task_openinvent = asyncio.create_task(
         message_generator(
             orders["openinvent"].format(
@@ -196,7 +201,16 @@ async def open_invent():
 
 
 async def write_row():
-    pass
+    task_write_row = asyncio.create_task(
+        message_generator(
+            orders["writerow"].format(
+                NR,
+                OPENING,
+                ROW_1,
+                ""
+            ) + NEW_LINE
+        )
+    )
 
 
 # Main function for calling async functions declared above
@@ -204,14 +218,13 @@ async def main():
     print(f"Init function started at {time.strftime('%X')}")
     try:
         await connect_and_status_device()
-        statements = [erase_order_queue(),queue_and_info_message(), fetch_tray()]
-        main_sequence = asyncio.gather(*statements)  
-        # statements.append
-        await main_sequence
+        # statements = [erase_order_queue(),queue_and_info_message(), fetch_tray(), write_row()]
+        # main_sequence = asyncio.gather(*statements)
+        # await main_sequence
+        # await idle()
     except KeyboardInterrupt:
         print("Interrupted by keyboard.")
     finally:
         print(f"Init function completed at {time.strftime('%X')}")
-
 
 asyncio.run(main())
