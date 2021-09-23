@@ -1,4 +1,3 @@
-from os import write
 import socket
 import time
 import asyncio
@@ -26,6 +25,7 @@ second = time.strftime("%S")
 # Dictionary with messages you can send
 orders = {
     "status": "Status(MessId {}, AckMessId {}, Info All/Teach/Device, Tray , OrderQueue {}, ExtAck {})",  # Tray nr or All, OrderQueue nr or All
+    "statusextack": "Status(MessId {}, ExtAck {}, Info All)",  # External acknowledge?
     "statusdevice": "Status(MessId {}, Info Device)",  # Derived from status above
     "statusqueueall": "Status(MessId {}, OrderQueue All)",  # Queue All
     "statusinfoall": "Status(MessId {}, AckMessId {}, Info All)",  # Info all
@@ -61,11 +61,13 @@ async def connection():
     try:
         print("Connecting...")
         await asyncio.sleep(1)
+        s.settimeout(10.0)
         s.connect((HOST, PORT))
         print("Connected successfully, communication begins..")
         await asyncio.sleep(0.2)
     except:
         print("Connection error.")
+
 
 # Connect and status device tasks
 async def connect_and_status_device():
@@ -90,7 +92,7 @@ async def connect_and_status_device():
 
 
 async def message_generator(message):
-    global NR, ACK
+    global NR, ACK, transID
     ACK += 1
     NR += 1
     if "SetTime" in message:
@@ -105,11 +107,7 @@ async def message_generator(message):
     print(decoded)
     if b"TransDone" in data:
         data = None
-    elif b"IdInOpn_1" in data:
-        print("Waiting for webpage trigger...")
-        await open_invent()
-        # data = None
-    await asyncio.sleep(0.1)  # Lower sleep later
+    await asyncio.sleep(0.2)  # Lower sleep later
 
 
 async def queue_and_info_message():
@@ -134,7 +132,7 @@ async def queue_and_info_message():
 
 async def idle():
     while True:
-        await asyncio.sleep(1)
+        # await asyncio.sleep(1)
         await queue_and_info_message()
 
 
@@ -151,7 +149,7 @@ async def erase_order_queue():
     
 # Load specific tray you send to PLC
 async def fetch_tray():
-    await asyncio.sleep(random.uniform(1.0, 15.0))
+    await asyncio.sleep(random.uniform(1.0, 10.0))
     task_specifictray = asyncio.create_task(
         message_generator(
             orders["fetchspecifictray"].format(
@@ -167,7 +165,7 @@ async def fetch_tray():
         )
     )
     await task_specifictray
-    print("New tray fetched.")
+    print("Wait for task done..")
 
 
 # Shows next trays if fetched
@@ -187,14 +185,13 @@ async def next_tray():
 
 
 async def open_invent():
-    await asyncio.sleep(2)
     task_openinvent = asyncio.create_task(
         message_generator(
             orders["openinvent"].format(
                 NR,
                 OPENING,
                 transID
-            ) + NEW_LINE
+            ) + "\r"
         )
     )
     await task_openinvent
@@ -213,15 +210,47 @@ async def write_row():
     )
 
 
+async def external_acknowledge():
+    await asyncio.sleep(20)
+    task_ext = asyncio.create_task(
+        message_generator(
+            orders["statusextack"].format(
+                NR,
+                transID
+            ) + "\r"
+        )
+    )
+    await task_ext
+    await open_invent()
+
 # Main function for calling async functions declared above
 async def main():
     print(f"Init function started at {time.strftime('%X')}")
     try:
         await connect_and_status_device()
-        # statements = [erase_order_queue(),queue_and_info_message(), fetch_tray(), write_row()]
-        # main_sequence = asyncio.gather(*statements)
-        # await main_sequence
+        await erase_order_queue()
+        # await queue_and_info_message()
+        # await queue_and_info_message()
+        task_fetchtray = asyncio.create_task(fetch_tray())
+        task_fetchtray.set_name("FetchTray")
+        while not task_fetchtray.done():
+            # print("Fetched new tray: " + str(task_fetchtray.done()))
+            await asyncio.sleep(1)
+            print("Waiting for new tray...")
+            await queue_and_info_message()
+            if task_fetchtray.done() == True:
+                print(task_fetchtray.get_name() + " Done. Waiting..")
+                await asyncio.sleep(3)
+                print("Task is running automatically, watch the web screen..")
         # await idle()
+        task_extack = asyncio.create_task(external_acknowledge())
+        while not task_extack.done():
+            # print("Waiting for accept on website..")
+            await asyncio.sleep(1)
+        print("Tray sending back.")
+        while True:
+            await asyncio.sleep(1)
+            await queue_and_info_message()
     except KeyboardInterrupt:
         print("Interrupted by keyboard.")
     finally:
