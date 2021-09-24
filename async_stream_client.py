@@ -92,7 +92,7 @@ async def connect_and_status_device():
 
 
 async def message_generator(message):
-    global NR, ACK, transID
+    global NR, ACK, transID, decoded
     ACK += 1
     NR += 1
     if "SetTime" in message:
@@ -107,7 +107,7 @@ async def message_generator(message):
     print(decoded)
     if b"TransDone" in data:
         data = None
-    await asyncio.sleep(0.2)  # Lower sleep later
+    await asyncio.sleep(0.5)  # Lower sleep later
 
 
 async def queue_and_info_message():
@@ -165,7 +165,7 @@ async def fetch_tray():
         )
     )
     await task_specifictray
-    print("Wait for task done..")
+    print("TransID: {}, Tray: {}, Count: {}, Box position: {}\n".format(transID, tray, count, box_position))
 
 
 # Shows next trays if fetched
@@ -195,6 +195,7 @@ async def open_invent():
         )
     )
     await task_openinvent
+    print("Tray sending back.\n")
 
 
 async def write_row():
@@ -220,40 +221,40 @@ async def external_acknowledge():
             ) + "\r"
         )
     )
+    print("External acknowledge sent.\n")
     await task_ext
     await open_invent()
 
+async def task_done(taskname):
+        print(taskname.get_name() + " Done. Waiting..\n")
+
 # Main function for calling async functions declared above
 async def main():
-    print(f"Init function started at {time.strftime('%X')}")
-    try:
-        await connect_and_status_device()
-        await erase_order_queue()
-        # await queue_and_info_message()
-        # await queue_and_info_message()
-        task_fetchtray = asyncio.create_task(fetch_tray())
-        task_fetchtray.set_name("FetchTray")
-        while not task_fetchtray.done():
-            # print("Fetched new tray: " + str(task_fetchtray.done()))
+    await connect_and_status_device()
+    await erase_order_queue()
+    task_fetchtray = asyncio.create_task(fetch_tray())
+    task_fetchtray.set_name("FetchTrayTask")
+    while not task_fetchtray.done():
+        print("Waiting for new tray...\n")
+        await queue_and_info_message()
+        if task_fetchtray.done() == True:
+            await task_done(task_fetchtray)
+            await asyncio.sleep(2)
+            print("Task is running automatically, watch the web screen..\n")
             await asyncio.sleep(1)
-            print("Waiting for new tray...")
-            await queue_and_info_message()
-            if task_fetchtray.done() == True:
-                print(task_fetchtray.get_name() + " Done. Waiting..")
-                await asyncio.sleep(3)
-                print("Task is running automatically, watch the web screen..")
-        # await idle()
-        task_extack = asyncio.create_task(external_acknowledge())
-        while not task_extack.done():
-            # print("Waiting for accept on website..")
-            await asyncio.sleep(1)
-        print("Tray sending back.")
-        while True:
-            await asyncio.sleep(1)
-            await queue_and_info_message()
-    except KeyboardInterrupt:
-        print("Interrupted by keyboard.")
-    finally:
-        print(f"Init function completed at {time.strftime('%X')}")
+    task_extack = asyncio.create_task(external_acknowledge())
+    task_extack.set_name("ExtAckTask")
+    while not task_extack.done():
+        await queue_and_info_message()
+        if task_extack.done() == True:
+            await task_done(task_extack)
+    while True:
+        await queue_and_info_message()
 
-asyncio.run(main())
+try:
+    print(f"Init function started at {time.strftime('%X')}")
+    asyncio.run(main())
+except KeyboardInterrupt:
+    print("Keyboard interrupt.")
+finally:
+    print(f"Init function completed at {time.strftime('%X')}")
