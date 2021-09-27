@@ -2,6 +2,7 @@ import socket
 import time
 import asyncio
 import random
+# import sys
 
 
 # Connection config constants
@@ -25,7 +26,7 @@ second = time.strftime("%S")
 # Dictionary with messages you can send
 orders = {
     "status": "Status(MessId {}, AckMessId {}, Info All/Teach/Device, Tray , OrderQueue {}, ExtAck {})",  # Tray nr or All, OrderQueue nr or All
-    "statusextack": "Status(MessId {}, ExtAck {}, Info All)",  # External acknowledge?
+    "statusextack": "Status(MessId {}, ExtAck {}, Info All)",  # External acknowledge
     "statusdevice": "Status(MessId {}, Info Device)",  # Derived from status above
     "statusqueueall": "Status(MessId {}, OrderQueue All)",  # Queue All
     "statusinfoall": "Status(MessId {}, AckMessId {}, Info All)",  # Info all
@@ -61,7 +62,7 @@ async def connection():
     try:
         print("Connecting...")
         await asyncio.sleep(1)
-        s.settimeout(10.0)
+        s.settimeout(5.0)
         s.connect((HOST, PORT))
         print("Connected successfully, communication begins..")
         await asyncio.sleep(0.2)
@@ -165,7 +166,13 @@ async def fetch_tray():
         )
     )
     await task_specifictray
-    print("TransID: {}, Tray: {}, Count: {}, Box position: {}\n".format(transID, tray, count, box_position))
+    print("TransID: {}, Tray: {}, Count: {}, Box position: {}\n".format(
+        transID,
+        tray,
+        count,
+        box_position
+        )
+    )
 
 
 # Shows next trays if fetched
@@ -225,8 +232,10 @@ async def external_acknowledge():
     await task_ext
     await open_invent()
 
+
 async def task_done(taskname):
         print(taskname.get_name() + " Done. Waiting..\n")
+
 
 # Main function for calling async functions declared above
 async def main():
@@ -251,10 +260,13 @@ async def main():
     while True:
         await queue_and_info_message()
 
+
 try:
-    print(f"Init function started at {time.strftime('%X')}")
+    # sys.stdout = open("log.txt", "w")
+    print(f"Main function started at {time.strftime('%X')}")
     asyncio.run(main())
 except KeyboardInterrupt:
     print("Keyboard interrupt.")
 finally:
-    print(f"Init function completed at {time.strftime('%X')}")
+    print(f"Main function completed at {time.strftime('%X')}")
+    # sys.stdout.close()
