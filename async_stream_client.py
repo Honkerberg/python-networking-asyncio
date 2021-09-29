@@ -2,6 +2,7 @@ import socket
 import time
 import asyncio
 import random
+
 # import sys
 
 
@@ -44,6 +45,14 @@ orders = {
     "ton": "Ton",  # Turn on connection timeout
     "toff": "Toff",  # Turn off connection timeout
 }
+
+app_status = {
+    "start": "Status start",
+    "run": "Status running",
+    "error": "Status error",
+    "stop": "Status stop",
+}
+
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 artnr = "Test artiklu"
 textarg = "Toto je popis k artiklu."
@@ -56,13 +65,14 @@ transID = random.randint(100, 199)
 tray1 = 0
 tray2 = 0
 tray3 = 0
+status = ""
 
 
 async def connection():
     try:
         print("Connecting...")
         await asyncio.sleep(1)
-        s.settimeout(5.0)
+        # s.settimeout(5.0)
         s.connect((HOST, PORT))
         print("Connected successfully, communication begins..")
         await asyncio.sleep(0.2)
@@ -72,28 +82,16 @@ async def connection():
 
 # Connect and status device tasks
 async def connect_and_status_device():
-    task_connection = asyncio.create_task(connection())
-    await task_connection
-    task_settime = asyncio.create_task(
-        message_generator(
-            orders["settime"].format(
-                NR, year, month, day, hour, minute, second
-            ) + NEW_LINE
-        )
+    await connection()
+    await message_generator(
+        orders["settime"].format(NR, year, month, day, hour, minute, second)
+        + NEW_LINE
     )
-    await task_settime
-    task_statusdevice = asyncio.create_task(
-        message_generator(
-            orders["statusdevice"].format(
-                NR
-            ) + NEW_LINE
-        )
-    )
-    await task_statusdevice
+    await message_generator(orders["statusdevice"].format(NR) + NEW_LINE)
 
 
 async def message_generator(message):
-    global NR, ACK, transID, decoded
+    global NR, ACK, transID, status
     ACK += 1
     NR += 1
     if "SetTime" in message:
@@ -112,153 +110,102 @@ async def message_generator(message):
 
 
 async def queue_and_info_message():
-        task_status_queue_all = asyncio.create_task(
-            message_generator(
-                orders["statusqueueall"].format(
-                    NR
-                ) + NEW_LINE
-            )
-        )
-        await task_status_queue_all
-        task_status_info_all = asyncio.create_task(
-            message_generator(
-                orders["statusinfoall"].format(
-                    NR,
-                    ACK
-                ) + NEW_LINE
-            )
-        )
-        await task_status_info_all       
-
-
-async def idle():
-    while True:
-        # await asyncio.sleep(1)
-        await queue_and_info_message()
+    await message_generator(orders["statusqueueall"].format(NR) + NEW_LINE)
+    await message_generator(orders["statusinfoall"].format(NR, ACK) + NEW_LINE)
 
 
 async def erase_order_queue():
-    task_erase_queue = asyncio.create_task(
-        message_generator(
-            orders["eraseorderqueue"].format(
-                NR
-            ) + NEW_LINE
-        )
-    )
-    await task_erase_queue
+    await message_generator(orders["eraseorderqueue"].format(NR) + NEW_LINE)
 
-    
+
 # Load specific tray you send to PLC
 async def fetch_tray():
     await asyncio.sleep(random.uniform(1.0, 10.0))
-    task_specifictray = asyncio.create_task(
-        message_generator(
-            orders["fetchspecifictray"].format(
-                NR,
-                transID,
-                OPENING,
-                tray,
-                box_position,
-                count,
-                format_artnr,
-                format_textarg,
-            ) + NEW_LINE
+    await message_generator(
+        orders["fetchspecifictray"].format(
+            NR,
+            transID,
+            OPENING,
+            tray,
+            box_position,
+            count,
+            format_artnr,
+            format_textarg,
         )
+        + NEW_LINE
     )
-    await task_specifictray
-    print("TransID: {}, Tray: {}, Count: {}, Box position: {}\n".format(
-        transID,
-        tray,
-        count,
-        box_position
+    print(
+        "TransID: {}, Tray: {}, Count: {}, Box position: {}\n".format(
+            transID, tray, count, box_position
         )
     )
 
 
 # Shows next trays if fetched
 async def next_tray():
-    task_nexttray = asyncio.create_task(
-        message_generator(
-            orders["nexttray"].format(
-                NR,
-                OPENING,
-                tray1,
-                tray2,
-                tray3
-            ) + NEW_LINE
-        )
+    await message_generator(
+        orders["nexttray"].format(NR, OPENING, tray1, tray2, tray3) + NEW_LINE
     )
-    await task_nexttray
 
 
+# Open inventory and put tray back
 async def open_invent():
-    task_openinvent = asyncio.create_task(
-        message_generator(
-            orders["openinvent"].format(
-                NR,
-                OPENING,
-                transID
-            ) + "\r"
-        )
+    await message_generator(
+        orders["openinvent"].format(NR, OPENING, transID) + "\r"
     )
-    await task_openinvent
     print("Tray sending back.\n")
 
 
 async def write_row():
-    task_write_row = asyncio.create_task(
-        message_generator(
-            orders["writerow"].format(
-                NR,
-                OPENING,
-                ROW_1,
-                ""
-            ) + NEW_LINE
-        )
+    await message_generator(
+        orders["writerow"].format(NR, OPENING, ROW_1, "") + NEW_LINE
     )
 
 
+# External acknowledgement from panel display on website
 async def external_acknowledge():
-    await asyncio.sleep(20)
-    task_ext = asyncio.create_task(
-        message_generator(
-            orders["statusextack"].format(
-                NR,
-                transID
-            ) + "\r"
-        )
-    )
+    await message_generator(orders["statusextack"].format(NR, transID) + "\r")
     print("External acknowledge sent.\n")
-    await task_ext
     await open_invent()
 
 
 async def task_done(taskname):
-        print(taskname.get_name() + " Done. Waiting..\n")
+    print(taskname.get_name() + " Done. Waiting..\n")
+
+
+async def info():
+    command = "Status(MessId {}, AckMessId {}, Info All)".format(NR, ACK) + NEW_LINE
+    print(command)
+    s.send(command.encode())
+    data = s.recv(1024)
+    decoded = data.decode()
+    print("Good") if "Info All" in command else print("Bad.")  # Ternary operation in Python, example
+    return decoded
 
 
 # Main function for calling async functions declared above
 async def main():
     await connect_and_status_device()
-    await erase_order_queue()
-    task_fetchtray = asyncio.create_task(fetch_tray())
-    task_fetchtray.set_name("FetchTrayTask")
-    while not task_fetchtray.done():
-        print("Waiting for new tray...\n")
-        await queue_and_info_message()
-        if task_fetchtray.done() == True:
-            await task_done(task_fetchtray)
-            await asyncio.sleep(2)
-            print("Task is running automatically, watch the web screen..\n")
-            await asyncio.sleep(1)
-    task_extack = asyncio.create_task(external_acknowledge())
-    task_extack.set_name("ExtAckTask")
-    while not task_extack.done():
-        await queue_and_info_message()
-        if task_extack.done() == True:
-            await task_done(task_extack)
-    while True:
-        await queue_and_info_message()
+    await info()
+    # await erase_order_queue()
+    # task_fetchtray = asyncio.create_task(fetch_tray())
+    # task_fetchtray.set_name("FetchTrayTask")
+    # while not task_fetchtray.done():
+    #     print("Waiting for new tray...\n")
+    #     await queue_and_info_message()
+    #     if task_fetchtray.done() == True:
+    #         await task_done(task_fetchtray)
+    #         await asyncio.sleep(1)
+    #         print("Task is running automatically, watch the web screen..\n")
+    #         await asyncio.sleep(1)
+    # task_extack = asyncio.create_task(external_acknowledge())
+    # task_extack.set_name("ExtAckTask")
+    # while not task_extack.done():
+    #     await queue_and_info_message()
+    #     if task_extack.done() == True:
+    #         await task_done(task_extack)
+    # while True:
+    #     await queue_and_info_message()
 
 
 try:
