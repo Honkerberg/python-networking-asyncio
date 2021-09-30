@@ -1,4 +1,3 @@
-from asyncio.tasks import sleep
 import socket
 import time
 import asyncio
@@ -26,7 +25,7 @@ hour = time.strftime("%H")
 minute = time.strftime("%M")
 second = time.strftime("%S")
 
-# Dictionary with messages you can send
+# Dictionary with messages - examples
 orders = {
     "status": "Status(MessId {}, AckMessId {}, Info All/Teach/Device, Tray , OrderQueue {}, ExtAck {})",  # Tray nr or All, OrderQueue nr or All
     "statusextack": "Status(MessId {}, ExtAck {}, Info All)",  # External acknowledge
@@ -63,18 +62,19 @@ tray3 = 0
 status = ""
 
 
+# Connect function
 async def connection():
     try:
         print("Connecting...")
         await asyncio.sleep(1)
-        # s.settimeout(5.0)
         s.connect((HOST, PORT))
         print("Connected successfully, communication begins..")
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(1)
     except:
         print("Connection error.")
 
 
+# Sending and receiving function
 async def send_and_receive(command):
     global NR, ACK, transID
     NR += 1
@@ -83,30 +83,39 @@ async def send_and_receive(command):
     data = s.recv(10000)
     decoded = data.decode()
     print(decoded)
+    if "EraseOrderQueue" in command:
+        print("Queue erased.\n")
+    elif "FetchTray" in command:
+        print("New tray fetched.\n")
     if b"TransDone" in data:
-        await queue_and_info()
-        await asyncio.sleep(0.5)
         data = None
         await queue_and_info()
         run_once = 0
         if run_once == 0:
             await extack_and_open_invent()
             run_once = 1
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(0.2)
 
 
 # Connect and status device tasks
 async def connect_and_status_device():
     await connection()
-    command = "SetTime(MessId {}, Year {}, Month {}, Day {}, Hour {}, Minute {}, Second {})".format(NR, year, month, day, hour, minute, second) + NEW_LINE
+    command = (
+        "SetTime(MessId {}, Year {}, Month {}, Day {}, Hour {}, Minute {}, Second {})".format(
+            NR, year, month, day, hour, minute, second
+        )
+        + NEW_LINE
+    )
     await send_and_receive(command)
 
 
+# Function shows queue in PLC
 async def status_queue_all():
     command = "Status(MessId {}, OrderQueue All)".format(NR) + NEW_LINE
     await send_and_receive(command)
 
 
+# Function shows info about PLC machine and elevator position
 async def status_info_all():
     if ACK == -1:
         command = "Status(MessId {}, Info All)".format(NR) + NEW_LINE
@@ -115,22 +124,40 @@ async def status_info_all():
     await send_and_receive(command)
 
 
+# Queue and elevator position
 async def queue_and_info():
     await status_queue_all()
     await status_info_all()
 
 
+# Erasing trays from queue
 async def erase_order_queue():
     command = "EraseOrderQueue(MessId {}, Opening All)" + NEW_LINE
     await send_and_receive(command)
 
 
-# Load specific tray you send to PLC
+# Load specific tray to PLC
 async def fetch_tray():
     await asyncio.sleep(random.uniform(1.0, 10.0))
-    command = "FetchTray(MessId {}, TransId {}, Opening {}, Start 1, Type OutNoReturn, Tray {}, Box {}, Count {}, ArtNr {}, ArtText {})".format(NR, transID, OPENING, tray, box_position, count, format_artnr, format_textarg) + NEW_LINE
+    command = (
+        "FetchTray(MessId {}, TransId {}, Opening {}, Start 1, Type OutNoReturn, Tray {}, Box {}, Count {}, ArtNr {}, ArtText {})".format(
+            NR,
+            transID,
+            OPENING,
+            tray,
+            box_position,
+            count,
+            format_artnr,
+            format_textarg,
+        )
+        + NEW_LINE
+    )
     await send_and_receive(command)
-    print("TransID: {}, Tray: {}, Count: {}, Box position: {}\n".format(transID, tray, count, box_position))
+    print(
+        "TransID: {}, Tray: {}, Count: {}, Box position: {}\n".format(
+            transID, tray, count, box_position
+        )
+    )
 
 
 # Shows next trays if fetched
@@ -142,21 +169,33 @@ async def fetch_tray():
 
 # Open inventory and put tray back
 async def extack_and_open_invent():
-    command = "OpenInvent(MessId {}, Opening {}, TransId {}, Enable 0)".format(NR, OPENING, transID) + "\r"
+    command = (
+        "OpenInvent(MessId {}, Opening {}, TransId {}, Enable 0)".format(
+            NR, OPENING, transID
+        )
+        + "\r"
+    )
     await send_and_receive(command)
-    print("Tray sending back.\n")
+    print("Tray sending back..\n")
 
 
 async def write_row():
-    command = "WriteRow(MessId {}, Opening {}, Row {}, Text {})".format(NR, OPENING, ROW_1, "") + NEW_LINE
+    command = (
+        "WriteRow(MessId {}, Opening {}, Row {}, Text {})".format(
+            NR, OPENING, ROW_1, ""
+        )
+        + NEW_LINE
+    )
     await send_and_receive(command)
 
 
+# Shows info about all trays
 async def trayall():
     command = "Status(MessId {}, Tray All)".format(NR) + NEW_LINE
     await send_and_receive(command)
 
 
+# Notify what task is done
 async def task_done(taskname):
     print(taskname.get_name() + " Done. Waiting..\n")
 
@@ -165,8 +204,6 @@ async def task_done(taskname):
 async def main():
     await connect_and_status_device()
     await erase_order_queue()
-    await queue_and_info()
-    await queue_and_info()
     task_fetchtray = asyncio.create_task(fetch_tray())
     task_fetchtray.set_name("FetchTrayTask")
     while not task_fetchtray.done():
@@ -177,6 +214,7 @@ async def main():
             await asyncio.sleep(1)
     while True:
         await queue_and_info()
+
 
 try:
     # sys.stdout = open("log.txt", "w")
