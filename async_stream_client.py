@@ -52,6 +52,8 @@ artnr = "Test artiklu"
 textarg = "Toto je popis k artiklu."
 format_artnr = "< {}>".format(len(artnr)) + artnr
 format_textarg = "< {}>".format(len(textarg)) + textarg
+textinfo = "Test zpravy WriteRow"
+format_textinfo = "< {}>".format(len(textinfo)) + textinfo
 box_position = random.randint(1, 10)
 tray = random.randint(1, 50)
 count = random.randint(1, 60)
@@ -93,6 +95,7 @@ async def send_and_receive(command):
         run_once = 0
         if run_once == 0:
             await extack_and_open_invent()
+            await write_row()
             run_once = 1
     await asyncio.sleep(0.2)
 
@@ -179,10 +182,11 @@ async def extack_and_open_invent():
     print("Tray sending back..\n")
 
 
+# Write row to article text
 async def write_row():
     command = (
         "WriteRow(MessId {}, Opening {}, Row {}, Text {})".format(
-            NR, OPENING, ROW_1, ""
+            NR, OPENING, ROW_1, "<  0>"
         )
         + NEW_LINE
     )
