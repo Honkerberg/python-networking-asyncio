@@ -209,6 +209,7 @@ async def task_done(taskname):
 # Main function for calling async functions declared above
 async def main():
     await connect_and_status_device()
+    await trayall()
     await erase_order_queue()
     task_fetchtray = asyncio.create_task(fetch_tray())
     task_fetchtray.set_name("FetchTrayTask")
