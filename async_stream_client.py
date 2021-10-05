@@ -60,7 +60,6 @@ transID = random.randint(100, 110)
 tray1 = 0
 tray2 = 0
 tray3 = 0
-status = ""
 
 
 # Connect function
@@ -77,7 +76,7 @@ async def connection():
 
 # Sending and receiving function
 async def send_and_receive(command):
-    global NR, ACK, transID
+    global NR, ACK, transID, tray1, tray2, tray3
     NR += 1
     ACK += 1
     s.send(command.encode())
@@ -94,7 +93,8 @@ async def send_and_receive(command):
         run_once = 0
         if run_once == 0:
             await extack_and_open_invent()
-            await write_row()
+            await write_row(ROW_1)
+            await write_row(ROW_2)
             run_once = 1
     await asyncio.sleep(0.2)
 
@@ -162,12 +162,14 @@ async def fetch_tray():
     )
 
 
-# Shows next trays if fetched
-# async def next_tray():
-#     await message_generator(
-#         orders["nexttray"].format(NR, OPENING, tray1, tray2, tray3) + NEW_LINE
-#     )
-
+# Shows next trays if fetched - not used for now
+async def next_tray():
+    command = "NextTray(MessId {}, Opening {}, Tray1 {}, Tray2 {}, Tray3 {})".format(NR, OPENING, tray1, tray2, tray3) + NEW_LINE
+    await send_and_receive(command)
+    if tray1 == 0 and tray2 == 0 and tray3 == 0:
+        print("Next tray is none.\n")
+    else:
+        print("Tray1: {}, Tray2: {}, Tray3: {}\n".format(tray1, tray2, tray3))
 
 # Open inventory and put tray back
 async def extack_and_open_invent():
@@ -182,14 +184,15 @@ async def extack_and_open_invent():
 
 
 # Write row to article text
-async def write_row():
+async def write_row(rownum):
     command = (
         "WriteRow(MessId {}, Opening {}, Row {}, Text {})".format(
-            NR, OPENING, ROW_1, "<  0>"
+            NR, OPENING, rownum, "<  0>"
         )
         + NEW_LINE
     )
     await send_and_receive(command)
+    print("Row {} written.".format(rownum))
 
 
 # Shows info about all trays
@@ -214,6 +217,7 @@ async def main():
         await queue_and_info()
         if task_fetchtray.done() == True:
             await task_done(task_fetchtray)
+            await next_tray()
             await asyncio.sleep(1)
     while True:
         await queue_and_info()
