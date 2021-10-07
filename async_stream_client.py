@@ -84,9 +84,13 @@ async def send_and_receive(command):
     decoded = data.decode()
     print(decoded)
     if "EraseOrderQueue" in command:
-        print("Queue erased.\n")
+        print("QUEUE ERASED\n")
     elif "FetchTray" in command:
-        print("New tray fetched.\n")
+        print("NEW TRAY FETCHED\n")
+    if b"IdOnUpLevel" in data:
+        print("TRAY RIDE\n")
+    if b"IdInOpn_1" in data:
+        print("TRAY AT OPENING\n")
     if b"TransDone" in data:
         data = None
         await queue_and_info()
@@ -95,7 +99,7 @@ async def send_and_receive(command):
             await extack_and_open_invent()
             await write_row(ROW_1)
             await write_row(ROW_2)
-            run_once = 1
+        run_once = 1
     await asyncio.sleep(0.2)
 
 
@@ -140,7 +144,7 @@ async def erase_order_queue():
 
 # Load specific tray to PLC
 async def fetch_tray():
-    await asyncio.sleep(random.uniform(1.0, 10.0))
+    await asyncio.sleep(random.uniform(1.0, 6.0))
     command = (
         "FetchTray(MessId {}, TransId {}, Opening {}, Start 1, Type OutNoReturn, Tray {}, Box {}, Count {}, ArtNr {}, ArtText {})".format(
             NR,
@@ -215,11 +219,14 @@ async def main():
     task_fetchtray.set_name("FetchTrayTask")
     while not task_fetchtray.done():
         print("Waiting for new tray...\n")
-        await queue_and_info()
-        if task_fetchtray.done() == True:
+        await asyncio.sleep(1)
+        # await queue_and_info()
+        if task_fetchtray.done():
+            await asyncio.wait_for(task_fetchtray, None)
             await task_done(task_fetchtray)
             await next_tray()
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
+        await queue_and_info()
     while True:
         await queue_and_info()
 
