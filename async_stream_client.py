@@ -15,6 +15,7 @@ OPENING = 1
 ROW_1 = 1
 ROW_2 = 2
 INVENTORY = False
+DONE = 0
 
 # Defined actual date time
 year = time.strftime("%Y")
@@ -76,36 +77,39 @@ async def connection():
 
 # Sending and receiving function
 async def send_and_receive(command):
-    global NR, ACK, transID, tray1, tray2, tray3
+    global NR, ACK, transID, tray1, tray2, tray3, DONE
     NR += 1
     ACK += 1
     s.send(command.encode())
     data = s.recv(10000)
     decoded = data.decode()
     print(decoded)
+    await asyncio.sleep(0.3)
     if "EraseOrderQueue" in command:
         print("QUEUE ERASED\n")
     elif "FetchTray" in command:
         print("NEW TRAY FETCHED\n")
     if b"IdOnUpLevel" in data:
         print("TRAY RIDE\n")
-    if b"IdInOpn_1" in data:
+    if (b"PosCarrUp 0") in data and DONE == 1:
+        print("FINISHED\n")
+        raise KeyboardInterrupt
+    elif b"IdInOpn_1" in data:
         print("TRAY AT OPENING\n")
     if b"TransDone" in data:
         data = None
         await queue_and_info()
         run_once = 0
         if run_once == 0:
-            await extack_and_open_invent()
+            task_extack_and_open_invent = asyncio.create_task(extack_and_open_invent())
+            await task_extack_and_open_invent
             await write_row(ROW_1)
             await write_row(ROW_2)
         run_once = 1
-    await asyncio.sleep(0.2)
 
 
 # Connect and status device tasks
-async def connect_and_status_device():
-    await connection()
+async def status_device():
     command = (
         "SetTime(MessId {}, Year {}, Month {}, Day {}, Hour {}, Minute {}, Second {})".format(
             NR, year, month, day, hour, minute, second
@@ -144,7 +148,7 @@ async def erase_order_queue():
 
 # Load specific tray to PLC
 async def fetch_tray():
-    await asyncio.sleep(random.uniform(1.0, 6.0))
+    await asyncio.sleep(random.uniform(5.0, 6.0))
     command = (
         "FetchTray(MessId {}, TransId {}, Opening {}, Start 1, Type OutNoReturn, Tray {}, Box {}, Count {}, ArtNr {}, ArtText {})".format(
             NR,
@@ -177,6 +181,8 @@ async def next_tray():
 
 # Open inventory and put tray back
 async def extack_and_open_invent():
+    global DONE
+    DONE = 1
     command = (
         "OpenInvent(MessId {}, Opening {}, TransId {}, Enable 0)".format(
             NR, OPENING, transID
@@ -212,7 +218,8 @@ async def task_done(taskname):
 
 # Main function for calling async functions declared above
 async def main():
-    await connect_and_status_device()
+    await connection()
+    await status_device()
     await trayall()
     await erase_order_queue()
     task_fetchtray = asyncio.create_task(fetch_tray())
@@ -220,23 +227,30 @@ async def main():
     while not task_fetchtray.done():
         print("Waiting for new tray...\n")
         await asyncio.sleep(1)
-        # await queue_and_info()
+        await queue_and_info()
         if task_fetchtray.done():
-            await asyncio.wait_for(task_fetchtray, None)
+            await asyncio.wait_for(task_fetchtray, 0.5)
             await task_done(task_fetchtray)
             await next_tray()
             await asyncio.sleep(5)
-        await queue_and_info()
+            await queue_and_info()
     while True:
-        await queue_and_info()
-
+        task_idle = asyncio.create_task(queue_and_info())
+        await task_idle
 
 try:
     # sys.stdout = open("log.txt", "w")
     print(f"Main function started at {time.strftime('%X')}")
     asyncio.run(main())
 except KeyboardInterrupt:
-    print("Keyboard interrupt.")
+    print("Keyboard interrupt automatically.")
 finally:
     print(f"Main function completed at {time.strftime('%X')}")
     # sys.stdout.close()
+
+    # continue_ride = input("Do you want another ride? Y/N\n")
+    # if  continue_ride == "y" or continue_ride == "Y":
+    #     DONE = 0
+    #     asyncio.run(main())
+    # else:
+    #     print("See you soon!\n")
