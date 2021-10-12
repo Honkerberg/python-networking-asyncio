@@ -15,7 +15,8 @@ OPENING = 1
 ROW_1 = 1
 ROW_2 = 2
 INVENTORY = False
-DONE = 0
+INVENTDONE = 0
+RIDEFIN = 0
 
 # Defined actual date time
 year = time.strftime("%Y")
@@ -48,16 +49,13 @@ orders = {
 }
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
 artnr = "Test artiklu"
 textarg = "Toto je popis k artiklu."
 format_artnr = "< {}>".format(len(artnr)) + artnr
 format_textarg = "< {}>".format(len(textarg)) + textarg
 textinfo = "Test zpravy WriteRow"
 format_textinfo = "< {}>".format(len(textinfo)) + textinfo
-box_position = random.randint(1, 10)
-tray = random.randint(1, 50)
-count = random.randint(1, 60)
-transID = random.randint(100, 110)
 tray1 = 0
 tray2 = 0
 tray3 = 0
@@ -77,23 +75,23 @@ async def connection():
 
 # Sending and receiving function
 async def send_and_receive(command):
-    global NR, ACK, transID, tray1, tray2, tray3, DONE
+    global NR, ACK, transID, tray1, tray2, tray3, INVENTDONE, RIDEFIN
     NR += 1
     ACK += 1
     s.send(command.encode())
     data = s.recv(10000)
     decoded = data.decode()
     print(decoded)
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(0.2)
     if "EraseOrderQueue" in command:
         print("QUEUE ERASED\n")
     elif "FetchTray" in command:
         print("NEW TRAY FETCHED\n")
     if b"IdOnUpLevel" in data:
         print("TRAY RIDE\n")
-    if (b"PosCarrUp 0") in data and DONE == 1:
+    if (b"PosCarrUp 0") in data and INVENTDONE == 1:
         print("FINISHED\n")
-        raise KeyboardInterrupt
+        RIDEFIN = 1
     elif b"IdInOpn_1" in data:
         print("TRAY AT OPENING\n")
     if b"TransDone" in data:
@@ -148,6 +146,9 @@ async def erase_order_queue():
 
 # Load specific tray to PLC
 async def fetch_tray():
+    box_position = random.randint(1, 10)
+    tray = random.randint(1, 50)
+    count = random.randint(1, 60)
     await asyncio.sleep(random.uniform(5.0, 6.0))
     command = (
         "FetchTray(MessId {}, TransId {}, Opening {}, Start 1, Type OutNoReturn, Tray {}, Box {}, Count {}, ArtNr {}, ArtText {})".format(
@@ -181,8 +182,8 @@ async def next_tray():
 
 # Open inventory and put tray back
 async def extack_and_open_invent():
-    global DONE
-    DONE = 1
+    global INVENTDONE
+    INVENTDONE = 1
     command = (
         "OpenInvent(MessId {}, Opening {}, TransId {}, Enable 0)".format(
             NR, OPENING, transID
@@ -218,7 +219,9 @@ async def task_done(taskname):
 
 # Main function for calling async functions declared above
 async def main():
-    await connection()
+    global INVENTDONE, RIDEFIN
+    INVENTDONE = 0
+    RIDEFIN = 0
     await status_device()
     await trayall()
     await erase_order_queue()
@@ -232,25 +235,29 @@ async def main():
             await asyncio.wait_for(task_fetchtray, 0.5)
             await task_done(task_fetchtray)
             await next_tray()
+            print("TRAY LOADING...\n")
             await asyncio.sleep(5)
             await queue_and_info()
     while True:
         task_idle = asyncio.create_task(queue_and_info())
         await task_idle
+        if RIDEFIN == 1:
+            break
 
 try:
     # sys.stdout = open("log.txt", "w")
     print(f"Main function started at {time.strftime('%X')}")
-    asyncio.run(main())
-except KeyboardInterrupt:
-    print("Keyboard interrupt automatically.")
+    asyncio.run(connection())
+    continue_ride = "y"
+    while continue_ride == "y" or continue_ride == "Y":
+        transID = random.randint(100, 110)
+        asyncio.run(main())
+        continue_ride = input("Do you want another ride? Y/N\n")
+        if continue_ride == "n" or continue_ride == "N":
+            print("SEE YOU SOON!\n")
+            break
+# except KeyboardInterrupt:
+#     print("Keyboard interrupt automatically.")
 finally:
     print(f"Main function completed at {time.strftime('%X')}")
     # sys.stdout.close()
-
-    # continue_ride = input("Do you want another ride? Y/N\n")
-    # if  continue_ride == "y" or continue_ride == "Y":
-    #     DONE = 0
-    #     asyncio.run(main())
-    # else:
-    #     print("See you soon!\n")
