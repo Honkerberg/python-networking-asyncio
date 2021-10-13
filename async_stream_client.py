@@ -35,7 +35,7 @@ orders = {
     "statusinfoall": "Status(MessId {}, AckMessId {}, Info All)",  # Info all
     "fetchtray": "FetchTray(MessId {}, TransID {}, Opening {}, Start 0/1, Type Out/In/OutNoReturn/InNoReturn, Tray {}, Box 'Position', ArtNr 'Number', ArtText 'Text')",
     "fetchspecifictray": "FetchTray(MessId {}, TransId {}, Opening {}, Start 1, Type OutNoReturn, Tray {}, Box {}, Count {}, ArtNr {}, ArtText {} )",  # Derived from fetchtray above
-    "fetchpriotray": "FetchPrioTray(MessId {}, TransID {}, Opening {}, Start 0/1, Type Out/In/OutNoReturn/InNoReturn, Tray {}, Box 'Position', ArtNr 'Number', ArtText 'Text')",
+    "fetchpriotray": "FetchPrioTray(MessId {}, TransID {}, Opening {}, Start 1, Type Out/In/OutNoReturn/InNoReturn, Tray {}, Box 'Position', ArtNr 'Number', ArtText 'Text')",
     "nexttray": "NextTray(MessId {}, Opening {}, Tray1 {}, Tray2 {}, Tray3 {})",
     "openinvent": "OpenInvent(MessId {}, Opening {}, TransId {}, Enable 0)",
     "eraseorderqueue": "EraseOrderQueue(MessId {}, Opening All)",  # Opening default 1, or Opening All
@@ -63,14 +63,14 @@ tray3 = 0
 
 # Connect function
 async def connection():
-    try:
-        print("Connecting...")
-        await asyncio.sleep(1)
-        s.connect((HOST, PORT))
-        print("Connected successfully, communication begins..")
-        await asyncio.sleep(1)
-    except:
-        print("Connection error.")
+    # try:
+    print("Connecting...")
+    await asyncio.sleep(1)
+    s.connect((HOST, PORT))
+    print("Connected successfully, communication begins..")
+    await asyncio.sleep(1)
+    # except ConnectionError:
+    #     print("Connection error.")
 
 
 # Sending and receiving function
@@ -102,7 +102,7 @@ async def send_and_receive(command):
             task_extack_and_open_invent = asyncio.create_task(extack_and_open_invent())
             await task_extack_and_open_invent
             await write_row(ROW_1)
-            await write_row(ROW_2)
+            await write_row(ROW_2)  
         run_once = 1
 
 
@@ -248,16 +248,18 @@ try:
     # sys.stdout = open("log.txt", "w")
     print(f"Main function started at {time.strftime('%X')}")
     asyncio.run(connection())
+    transID = random.randint(100, 110)
     continue_ride = "y"
     while continue_ride == "y" or continue_ride == "Y":
-        transID = random.randint(100, 110)
         asyncio.run(main())
         continue_ride = input("Do you want another ride? Y/N\n")
         if continue_ride == "n" or continue_ride == "N":
             print("SEE YOU SOON!\n")
             break
-# except KeyboardInterrupt:
-#     print("Keyboard interrupt automatically.")
+except KeyboardInterrupt:
+    print("Keyboard interrupt.")
+except ConnectionError:
+    print("Connection error, shutdown.")
 finally:
     print(f"Main function completed at {time.strftime('%X')}")
     # sys.stdout.close()
