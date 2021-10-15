@@ -95,8 +95,6 @@ async def send_and_receive(command):
     elif b"IdInOpn_1" in data:
         if FETCH:
             print("TRAY AT OPENING\n") 
-        else:
-            print("TRAY RIDE\n")
     if b"TransDone" in data:  # PROBLEM SOLVED!
         data = None
         await queue_and_info()
