@@ -14,9 +14,9 @@ ACK = -1
 OPENING = 1
 ROW_1 = 1
 ROW_2 = 2
-INVENTORY = False
-INVENTDONE = 0
-RIDEFIN = 0
+INVENTDONE = False
+RIDEFIN = False
+FETCH = False
 
 # Defined actual date time
 year = time.strftime("%Y")
@@ -75,7 +75,7 @@ async def connection():
 
 # Sending and receiving function
 async def send_and_receive(command):
-    global NR, ACK, transID, tray1, tray2, tray3, INVENTDONE, RIDEFIN
+    global NR, ACK, transID, tray1, tray2, tray3, INVENTDONE, RIDEFIN, FETCH
     NR += 1
     ACK += 1
     s.send(command.encode())
@@ -89,21 +89,27 @@ async def send_and_receive(command):
         print("NEW TRAY FETCHED\n")
     if b"IdOnUpLevel" in data:
         print("TRAY RIDE\n")
-    if (b"PosCarrUp 0") in data and INVENTDONE == 1:
+    if (b"PosCarrUp 0") in data and INVENTDONE:
         print("FINISHED\n")
-        RIDEFIN = 1
+        RIDEFIN = True
     elif b"IdInOpn_1" in data:
-        print("TRAY AT OPENING\n")
-    if b"TransDone" in data:
+        if FETCH:
+            print("TRAY AT OPENING\n") 
+        else:
+            print("TRAY RIDE\n")
+    if b"TransDone" in data:  # PROBLEM SOLVED!
         data = None
         await queue_and_info()
-        run_once = 0
-        if run_once == 0:
-            task_extack_and_open_invent = asyncio.create_task(extack_and_open_invent())
-            await task_extack_and_open_invent
-            await write_row(ROW_1)
-            await write_row(ROW_2)  
-        run_once = 1
+        if FETCH:
+            run_once = 0
+            if run_once == 0:
+                task_extack_and_open_invent = asyncio.create_task(extack_and_open_invent())
+                await task_extack_and_open_invent
+                await write_row(ROW_1)
+                await write_row(ROW_2)  
+            run_once = 1
+        else:
+            pass
 
 
 # Connect and status device tasks
@@ -146,6 +152,8 @@ async def erase_order_queue():
 
 # Load specific tray to PLC
 async def fetch_tray():
+    global FETCH
+    FETCH = True
     box_position = random.randint(1, 10)
     tray = random.randint(1, 50)
     count = random.randint(1, 60)
@@ -171,7 +179,7 @@ async def fetch_tray():
     )
 
 
-# Shows next trays if fetched - not used for now
+# Shows next trays if fetched - not used for now, used when fetched more trays
 async def next_tray():
     command = "NextTray(MessId {}, Opening {}, Tray1 {}, Tray2 {}, Tray3 {})".format(NR, OPENING, tray1, tray2, tray3) + NEW_LINE
     await send_and_receive(command)
@@ -183,7 +191,7 @@ async def next_tray():
 # Open inventory and put tray back
 async def extack_and_open_invent():
     global INVENTDONE
-    INVENTDONE = 1
+    INVENTDONE = True
     command = (
         "OpenInvent(MessId {}, Opening {}, TransId {}, Enable 0)".format(
             NR, OPENING, transID
@@ -219,9 +227,10 @@ async def task_done(taskname):
 
 # Main function for calling async functions declared above
 async def main():
-    global INVENTDONE, RIDEFIN
-    INVENTDONE = 0
-    RIDEFIN = 0
+    global INVENTDONE, RIDEFIN, FETCH
+    FETCH = False
+    INVENTDONE = False
+    RIDEFIN = False
     await status_device()
     await trayall()
     await erase_order_queue()
@@ -241,16 +250,16 @@ async def main():
     while True:
         task_idle = asyncio.create_task(queue_and_info())
         await task_idle
-        if RIDEFIN == 1:
+        if RIDEFIN:
             break
 
 try:
     # sys.stdout = open("log.txt", "w")
     print(f"Main function started at {time.strftime('%X')}")
     asyncio.run(connection())
-    transID = random.randint(100, 110)
     continue_ride = "y"
     while continue_ride == "y" or continue_ride == "Y":
+        transID = random.randint(100, 110)
         asyncio.run(main())
         continue_ride = input("Do you want another ride? Y/N\n")
         if continue_ride == "n" or continue_ride == "N":
