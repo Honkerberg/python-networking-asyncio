@@ -14,7 +14,7 @@ async def conn():
     print("Connected")
 
 async def msg():
-    message = start + "00001050RS2" + end + "\r\n"
+    message = start + "00001050STZS01" + end + "\r\n"
     print(message)
     s.send(message.encode())
     data = s.recv(1000)
