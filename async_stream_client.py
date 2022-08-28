@@ -82,7 +82,7 @@ async def send_and_receive(command):
     data = s.recv(10000)
     decoded = data.decode()
     print(decoded)
-    await asyncio.sleep(0.2)
+    await asyncio.sleep(1)
     if "EraseOrderQueue" in command:
         print("QUEUE ERASED\n")
     elif "FetchTray" in command:
@@ -231,20 +231,20 @@ async def main():
     RIDEFIN = False
     await status_device()
     await trayall()
-    await erase_order_queue()
-    task_fetchtray = asyncio.create_task(fetch_tray())
-    task_fetchtray.set_name("FetchTrayTask")
-    while not task_fetchtray.done():
-        print("Waiting for new tray...\n")
-        await asyncio.sleep(1)
-        await queue_and_info()
-        if task_fetchtray.done():
-            await asyncio.wait_for(task_fetchtray, 0.5)
-            await task_done(task_fetchtray)
-            await next_tray()
-            print("TRAY LOADING...\n")
-            await asyncio.sleep(5)
-            await queue_and_info()
+    # await erase_order_queue()
+    # task_fetchtray = asyncio.create_task(fetch_tray())
+    # task_fetchtray.set_name("FetchTrayTask")
+    # while not task_fetchtray.done():
+    #     print("Waiting for new tray...\n")
+    #     await asyncio.sleep(1)
+    #     await queue_and_info()
+    #     if task_fetchtray.done():
+    #         await asyncio.wait_for(task_fetchtray, 0.5)
+    #         await task_done(task_fetchtray)
+    #         await next_tray()
+    #         print("TRAY LOADING...\n")
+    #         await asyncio.sleep(5)
+    #         await queue_and_info()
     while True:
         task_idle = asyncio.create_task(queue_and_info())
         await task_idle
