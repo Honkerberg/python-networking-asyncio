@@ -30,3 +30,24 @@ SetTime()			Set the PLC time.
 Toff			Turn off connection timeout.
 Ton			Turn on connection timeout.
 Help inside a command brackets gives syntax help. E.g. Status(Help)
+
+Structure of the messages, if you send it to PLC:
+-------------------------------------------------
+"status": "Status(MessId {}, AckMessId {}, Info All/Teach/Device, Tray , OrderQueue {}, ExtAck {})",  # Tray nr or All, OrderQueue nr or All
+"statusextack": "Status(MessId {}, ExtAck {}, Info All)",  # External acknowledge
+"statusdevice": "Status(MessId {}, Info Device)",  # Derived from status above
+"statusqueueall": "Status(MessId {}, OrderQueue All)",  # Queue All
+"statusinfoall": "Status(MessId {}, AckMessId {}, Info All)",  # Info all
+"fetchtray": "FetchTray(MessId {}, TransID {}, Opening {}, Start 0/1, Type Out/In/OutNoReturn/InNoReturn, Tray {}, Box 'Position', ArtNr 'Number', ArtText 'Text')",
+"fetchspecifictray": "FetchTray(MessId {}, TransId {}, Opening {}, Start 1, Type OutNoReturn, Tray {}, Box {}, Count {}, ArtNr {}, ArtText {} )",  # Derived from fetchtray above
+"fetchpriotray": "FetchPrioTray(MessId {}, TransID {}, Opening {}, Start 1, Type Out/In/OutNoReturn/InNoReturn, Tray {}, Box 'Position', ArtNr 'Number', ArtText 'Text')",
+"nexttray": "NextTray(MessId {}, Opening {}, Tray1 {}, Tray2 {}, Tray3 {})",
+"openinvent": "OpenInvent(MessId {}, Opening {}, TransId {}, Enable 0)",
+"eraseorderqueue": "EraseOrderQueue(MessId {}, Opening All)",  # Opening default 1, or Opening All
+"writerow": "WriteRow(MessId {}, Opening {}, Row {}, Text {})",
+"lightbar": "LightBar(MessId {}, Opening {}, Type {}, XPos {}, XSize {}, YDigit {})",
+"laserpointer": "LaserPointer(MessId {}, LpId {}, Type {}, XPos {}, YPos {})",
+"sidetable": "SideTable(MessId {}, Opening {}, Type 'Out/In', XPos {})",
+"settime": "SetTime(MessId {}, Year {}, Month {}, Day {}, Hour {}, Minute {}, Second {})",  # Set actual date and time
+"ton": "Ton",  # Turn on connection timeout
+"toff": "Toff",  # Turn off connection timeout
