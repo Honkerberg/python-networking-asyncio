@@ -4,3 +4,4 @@ async_modules.py
 __pycache__
 log*.txt
 .vscode
+*.log
