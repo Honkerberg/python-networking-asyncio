@@ -8,7 +8,7 @@ import logging.handlers
 
 # Connection config constants
 HOST = "127.0.0.1"
-# HOST = "192.168.11.11"
+# HOST = "192.168.1.15"
 PORT = 20001
 NEW_LINE = "\r\n"  # \r\n = Carriage return + Line feed
 NR = 1
@@ -116,17 +116,17 @@ async def send_and_receive(command):
         if FETCH:
             # print("TRAY AT OPENING\n") 
             logger.info(f"TRAY AT OPENING")
-    if b"TransDone" in data:  # PROBLEM SOLVED!
-        data = None
-        await queue_and_info()
-        if FETCH:
-            run_once = 0
-            if run_once == 0:
-                task_extack_and_open_invent = asyncio.create_task(extack_and_open_invent())
-                await task_extack_and_open_invent
-                await write_row(ROW_1)
-                await write_row(ROW_2)  
-            run_once = 1
+    # if b"TransDone" in data:  # PROBLEM SOLVED!
+    #     data = None
+    #     await queue_and_info()
+    #     if FETCH:
+    #         run_once = 0
+    #         if run_once == 0:
+    #             task_extack_and_open_invent = asyncio.create_task(extack_and_open_invent())
+    #             await task_extack_and_open_invent
+    #             await write_row(ROW_1)
+    #             await write_row(ROW_2)  
+    #         run_once = 1
         else:
             pass
 
@@ -247,7 +247,7 @@ async def main():
     INVENTDONE = False
     RIDEFIN = False
     await status_device()
-    await erase_order_queue()
+    # await erase_order_queue()
     # task_fetchtray = asyncio.create_task(fetch_tray())
     # task_fetchtray.set_name("FetchTrayTask")
     # while not task_fetchtray.done():
@@ -257,7 +257,7 @@ async def main():
     #         await asyncio.wait_for(task_fetchtray, 0.5)
     #         await task_done(task_fetchtray)
     #         logger.info(f"TRAY LOADING..")
-    #         await asyncio.sleep(3)
+    #         await asyncio.sleep(3)                                                                                                                                                                                                                          
     #         await queue_and_info()
     while True:
         task_idle = asyncio.create_task(queue_and_info())

@@ -3,9 +3,9 @@ Help syntax where you can see what should command contains, Example: Status(Help
 
 Status(MessId 'nr', AckMessId 'nr', Info All/Teach/Device, Tray 'nr'/All, OrderQueue 'nr'/All, ExtAck 'transId')
 
-FetchTray(MessId 'nr', TransId 'nr', Opening 'nr', Start 0/1, Type Out/In/OutNoReturn/InNoReturn, Tray 'nr', Box 'Position', ArtNr 'Number', ArtText 'Text')
+FetchTray(MessId 'nr', TransID 'nr', Opening 'nr', Start 0/1, Type Out/In/OutNoReturn/InNoReturn, Tray 'nr', Box 'Position', ArtNr 'Number', ArtText 'Text')
 
-FetchPrioTray(MessId 'nr', TransId 'nr', Opening 'nr', Start 0/1, Type Out/In/OutNoReturn/InNoReturn, Tray 'nr', Box 'Position', ArtNr 'Number', ArtText 'Text')
+FetchPrioTray(MessId 'nr', TransID 'nr', Opening 'nr', Start 0/1, Type Out/In/OutNoReturn/InNoReturn, Tray 'nr', Box 'Position', ArtNr 'Number', ArtText 'Text')
 
 NextTray(MessId 'nr', Opening 'nr', Tray1 'nr', Tray2 'nr', Tray3 'nr')
 
